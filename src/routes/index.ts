@@ -1,13 +1,16 @@
 import { Router } from "express";
-import { authAdminController, createAdminController } from "../controllers/Admin";
-import { Auth } from '../middlewares/Auth'
 import multer from 'multer';
+import { Auth } from '../middlewares/Auth'
 import UploadImage from '../middlewares/UploadImage'
+import { authAdminController, createAdminController } from "../controllers/Admin";
 import { createCharactterController, deleteCharacterController, editCharacterController, getCharacterByIdController, listCharactersController, searchCharacterController } from "../controllers/Character";
+import { HomeController } from "../controllers/HomeController";
 
 const auth = new Auth();
 
 const router = Router();
+
+router.get('/', new HomeController().home)
 
 router.post('/admin', auth.private, createAdminController.create)
 router.post('/admin/signin', authAdminController.login)

@@ -37,11 +37,11 @@ export class EditCharacterController {
                     
                     await this.editCharacterUseCase.execute(id, data, img)
 
-                    return response.status(203).json({message: 'Character successfully updated'});
+                    return response.status(201).json({message: 'Character successfully updated'});
                 } else {
                     await this.editCharacterUseCase.execute(id, data)
 
-                    return response.status(203).json({message: 'Character successfully updated'});
+                    return response.status(201).json({message: 'Character successfully updated'});
                 }
 
             } else {

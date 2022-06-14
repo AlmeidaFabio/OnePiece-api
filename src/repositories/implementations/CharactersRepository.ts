@@ -1,4 +1,5 @@
 import { Like, Repository } from "typeorm";
+import { unlink } from 'fs/promises'
 import { AppDataSource } from "../../database/connections/mysql";
 import { ICharacterDTO } from "../../dtos/ICharacterDTO";
 import { IImageDTO } from "../../dtos/IImageDTO";
@@ -81,6 +82,7 @@ export class CharactersRepository implements ICharactersRepository {
             }).catch(error => error)
     
             if(image) {
+                await unlink(image.url)
                 await this.imagesRepository.delete(image.id).catch(error => error)
             }
             
