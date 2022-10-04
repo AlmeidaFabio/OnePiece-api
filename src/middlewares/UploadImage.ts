@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import { Request } from 'express';
 
 const uploadFolder = (fieldname:string) => {
-    return path.resolve(__dirname, '..', '..', 'public', `${fieldname}s`);
+    return path.resolve(__dirname, '..', '..', 'tmp', `${fieldname}s`);
 }
 
 const storageTypes = {
@@ -25,7 +25,7 @@ const storageTypes = {
 }
 
 export default {
-    dest: path.resolve(__dirname, '..', '..', 'public', 'images'),
+    dest: path.resolve(__dirname, '..', '..', 'tmp', 'images'),
     storage:storageTypes[process.env.STORAGE],
     limits: { fileSize: 2 * 1024 * 1024 },
     fileFilter: (req:Request, file:Express.Multer.File, cb:multer.FileFilterCallback) => {

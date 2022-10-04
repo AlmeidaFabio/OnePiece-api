@@ -2,8 +2,19 @@ import { Router } from "express";
 import multer from 'multer';
 import { Auth } from '../middlewares/Auth'
 import UploadImage from '../middlewares/UploadImage'
-import { authAdminController, createAdminController } from "../controllers/Admin";
-import { createCharactterController, deleteCharacterController, editCharacterController, getCharacterByIdController, listCharactersController, searchCharacterController } from "../controllers/Character";
+import { 
+    authAdminController, 
+    createAdminController,
+    getAdminController 
+} from "../controllers/Admin";
+import { 
+    createCharactterController, 
+    deleteCharacterController, 
+    editCharacterController, 
+    getCharacterByIdController, 
+    listCharactersController, 
+    searchCharacterController 
+} from "../controllers/Character";
 import { HomeController } from "../controllers/HomeController";
 
 const auth = new Auth();
@@ -14,6 +25,7 @@ router.get('/', new HomeController().home)
 
 router.post('/admin', auth.private, createAdminController.create)
 router.post('/admin/signin', authAdminController.login)
+router.get('/admin/:id', auth.private, getAdminController.getAdminById)
 
 router.post('/character', auth.private, multer(UploadImage).single("image"), createCharactterController.create)
 router.get('/characters', listCharactersController.listCharacters)

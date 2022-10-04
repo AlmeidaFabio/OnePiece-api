@@ -7,14 +7,14 @@ export class ListCharactersController {
     }
 
     async listCharacters(request:Request, response:Response) {
-        const { page = 1, limit = 16 } = request.query;
+        const { page = 1, limit = 8 } = request.query;
 
         try {
             const res = await this.listCharaterUseCase.execute(page.toString(), limit.toString());
-
+            
             return response.status(200).json({
                 characters: res.data,
-                totalPages: Math.ceil(res.count / parseInt(limit.toString())),
+                totalPages: Math.ceil(parseInt(res.count) / parseInt(limit.toString())),
                 page
 
             })

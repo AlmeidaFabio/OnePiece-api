@@ -31,4 +31,14 @@ export class AdminsRepository implements IAdminRepository {
 
         return admin
     }
+
+    async getAdmin(id:string) {
+        const admin = await this.adminsRepository.findOne({
+            where: {
+                id
+            }
+        })
+
+        return admin;
+    }
 }

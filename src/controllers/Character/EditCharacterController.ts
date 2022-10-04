@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { ICharacterDTO } from "../../dtos/ICharacterDTO";
 import { IImageDTO } from "../../dtos/IImageDTO";
 import { EditCharacterUseCase } from "../../useCases/Character/EditCharacterUseCase";
+import sharp from "sharp";
+import { unlink } from 'fs/promises'
 
 interface MulterRequest extends Request {
     file: any;
@@ -29,8 +31,15 @@ export class EditCharacterController {
         try {
             if(token) {
                 if(request.file) {
-                    const { filename, fieldname } = request.file;
+                    const { filename, fieldname, path } = request.file;
 
+                    await sharp(path)
+                    .resize(300)
+                    .toFormat('jpeg')
+                    .toFile(`./public/${fieldname}s/${filename}`)
+
+                    await unlink(path)
+                    
                     const img: IImageDTO = {
                         url: `${process.env.BASE_URL}:${process.env.PORT}/${fieldname}s/${filename}`,
                     }

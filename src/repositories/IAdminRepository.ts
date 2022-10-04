@@ -4,4 +4,5 @@ import { Admin } from "../entities/Admin";
 export interface IAdminRepository {
     create(admin: IAdminRequestDTO): Promise<void>;
     findByEmail(email:string): Promise<Admin>;
+    getAdmin(id:string):Promise<Admin>;
 }

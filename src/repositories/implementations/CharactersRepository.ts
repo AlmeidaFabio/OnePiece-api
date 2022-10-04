@@ -1,5 +1,4 @@
 import { Like, Repository } from "typeorm";
-import { unlink } from 'fs/promises'
 import { AppDataSource } from "../../database/connections/mysql";
 import { ICharacterDTO } from "../../dtos/ICharacterDTO";
 import { IImageDTO } from "../../dtos/IImageDTO";
@@ -7,6 +6,7 @@ import { IListCharacterResponseDTO } from "../../dtos/IListCharacterResponseDTO"
 import { Character } from "../../entities/Character";
 import { Image } from "../../entities/Image";
 import { ICharactersRepository } from "../ICharactersRepositorry";
+import { unlink } from 'fs/promises'
 
 export class CharactersRepository implements ICharactersRepository {
     private charactersRepository: Repository<Character>;
@@ -39,14 +39,15 @@ export class CharactersRepository implements ICharactersRepository {
     }
 
     async read(page?:string, limit?:string): Promise<IListCharacterResponseDTO> {
-        const characters = await this.charactersRepository.find({
+        const characters: Character[] = await this.charactersRepository.find({
             relations:["image"],
                order: {name: "ASC"},
                take:(parseInt(limit) * 1),
                skip:((parseInt(page) - 1) * parseInt(limit))
         }).catch(error => error)
 
-        const count = characters.length;
+        const countChars: Character[] = await this.charactersRepository.find()
+        const count = countChars.length;
 
         return {
             data: characters,
@@ -75,15 +76,15 @@ export class CharactersRepository implements ICharactersRepository {
         }).catch(error => error)
 
         if(img) {
-            const image: Image = await this.imagesRepository.findOne({
+            const oldImage: Image = await this.imagesRepository.findOne({
                 where: {
                     characterId: id
                 }
             }).catch(error => error)
     
-            if(image) {
-                await unlink(image.url)
-                await this.imagesRepository.delete(image.id).catch(error => error)
+            if(oldImage) {
+                await unlink(oldImage.url).catch(error => error)
+                await this.imagesRepository.delete(oldImage.id).catch(error => error)
             }
             
             const newImage = this.imagesRepository.create({
