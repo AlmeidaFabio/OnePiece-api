@@ -14,7 +14,7 @@ export class DeleteCharacterController {
             if(token) {
                 await this.deleteCharacterUseCase.execute(id)
 
-                return response.status(203).json({message: 'Character successfully deleted'})
+                return response.status(200).json({message: 'Character successfully deleted'})
             } else {
                 return response.status(400).json({ error: 'Unauthorized!!!' })
             }

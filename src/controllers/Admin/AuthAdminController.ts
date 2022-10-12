@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { IAdminRequestDTO } from "../../dtos/IAdminRequestDTO";
-import { IAdminResponseDTO } from "../../dtos/IAdminResponseDTO";
 import { AuthAdminUseCase } from "../../useCases/Admin/AuthAdminUseCase";
 
 export class AuthAdminController {

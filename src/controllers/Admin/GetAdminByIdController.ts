@@ -3,7 +3,7 @@ import { GetAdminUseCase } from "../../useCases/Admin/GetAdminUseCase";
 
 export class GetAdminByIdController {
     constructor(private getAdmin: GetAdminUseCase) {
-
+        this.getAdminById = this.getAdminById.bind(this)
     }
 
     async getAdminById(request:Request, response:Response) {

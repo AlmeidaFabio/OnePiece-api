@@ -7,7 +7,7 @@ export class ListCharactersController {
     }
 
     async listCharacters(request:Request, response:Response) {
-        const { page = 1, limit = 8 } = request.query;
+        const { page = 1, limit = 3 } = request.query;
 
         try {
             const res = await this.listCharaterUseCase.execute(page.toString(), limit.toString());

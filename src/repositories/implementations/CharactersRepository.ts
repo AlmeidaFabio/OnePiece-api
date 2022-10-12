@@ -99,7 +99,17 @@ export class CharactersRepository implements ICharactersRepository {
     }
 
     async delete(id: string): Promise<void> {
-        return await this.charactersRepository.delete(id).catch(error => error)
+        const image: Image = await this.imagesRepository.findOne({
+            where: {
+                characterId: id
+            }
+        }).catch(error => error)
+
+        await this.imagesRepository.delete(image.id).catch(error => error)
+
+        await this.charactersRepository.delete(id).catch(error => error)
+
+        return
     }
 
     async search(text: string): Promise<Character[]> {
