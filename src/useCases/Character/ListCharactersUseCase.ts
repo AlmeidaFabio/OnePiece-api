@@ -1,4 +1,4 @@
-import { ICharactersRepository } from "../../repositories/ICharactersRepositorry";
+import { ICharactersRepository } from "../../repositories/ICharactersRepository";
 
 export class ListCharactersUseCase {
     constructor(private charactersRepository: ICharactersRepository) {}

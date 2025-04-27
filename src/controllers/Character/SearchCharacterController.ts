@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Character } from "../../entities/Character";
+import { Character } from "@prisma/client";
 import { SearchCharacterUseCase } from "../../useCases/Character/SearchCharacterUseCase";
 
 export class SearchCharacterController {
@@ -15,7 +15,10 @@ export class SearchCharacterController {
             return response.status(200).json(res)
             
         } catch (error) {
-            return response.status(400).json({error: error.message})
+            if (error instanceof Error) {
+                return response.status(400).json({error: error.message})
+            }
+            return response.status(400).json({error: 'Erro desconhecido'})
         }
     }
 }

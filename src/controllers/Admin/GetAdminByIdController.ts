@@ -14,8 +14,13 @@ export class GetAdminByIdController {
 
             return response.status(200).json(admin);
         } catch (error) {
+            if (error instanceof Error) {
+                return response.status(400).send({
+                    error: error.message
+                });
+            }
             return response.status(400).send({
-                error: error.message
+                error: 'Unknown error'
             });
         }
     }
