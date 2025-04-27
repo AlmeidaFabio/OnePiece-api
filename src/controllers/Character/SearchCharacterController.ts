@@ -7,16 +7,13 @@ export class SearchCharacterController {
         this.search = this.search.bind(this)
     }
     async search(request:Request, response:Response) {
-        const { txt } = request.body
+        const { txt = '' } = request.query
 
         try {
-            const res:Character[] = await this.searchCharacterUseCase.execute(txt)
+            const res:Character[] = await this.searchCharacterUseCase.execute(txt.toString())
 
-            if(res.length > 0) {
-                return response.status(200).json(res)
-            } else {
-                return response.status(400).json({error: 'No results found'})
-            }
+            return response.status(200).json(res)
+            
         } catch (error) {
             return response.status(400).json({error: error.message})
         }

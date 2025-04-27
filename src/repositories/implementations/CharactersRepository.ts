@@ -115,7 +115,7 @@ export class CharactersRepository implements ICharactersRepository {
     async search(text: string): Promise<Character[]> {
         const result = await this.charactersRepository.find({
             where:[{
-                name: Like(`%${text}%`)
+                name: Like(`%${text}`)
             }],
             relations:["image"]
         }).catch(error => error)
