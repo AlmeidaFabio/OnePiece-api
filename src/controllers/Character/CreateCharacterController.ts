@@ -1,60 +1,64 @@
 import { Request, Response } from "express";
-import { ICharacterDTO } from "../../dtos/ICharacterDTO";
-import { IImageDTO } from "../../dtos/IImageDTO";
 import { CreateCharacterUseCase } from "../../useCases/Character/CreateCharacterUseCase";
+import { CreateCharacterDTO } from '../../validations/characterValidations';
 import sharp from "sharp";
-import { unlink } from 'fs/promises'
-import { CharactersRepository } from '../../repositories/implementations/CharactersRepository';
+import { unlink } from 'fs/promises';
+import path from 'path';
 
 interface MulterRequest extends Request {
     file?: Express.Multer.File;
 }
 
 export class CreateCharacterController {
-    constructor(private createCharacterUseCase: CreateCharacterUseCase){
-        this.handle = this.handle.bind(this)
+    constructor(private createCharacterUseCase: CreateCharacterUseCase) {
+        this.handle = this.handle.bind(this);
     }
 
-    async handle(request:MulterRequest, response:Response) {
-        const { name, denomination, category, description, devilFruit } = request.body;
-        const file = request.file;
-        const token = request.headers.authorization;
-
+    async handle(request: MulterRequest, response: Response) {
         try {
-            const data: ICharacterDTO = {
+            const { name, description, bounty, devilFruit, crew } = request.body as CreateCharacterDTO;
+            const file = request.file;
+
+            const data: CreateCharacterDTO = {
                 name,
-                denomination,
-                category,
                 description,
-                devilFruit
+                bounty: Number(bounty),
+                devilFruit,
+                crew,
+                image: undefined
+            };
+
+            if (file) {
+                // Processa a imagem
+                const processedImage = await sharp(file.path)
+                    .resize(300)
+                    .toFormat('jpeg')
+                    .toFile(path.resolve(__dirname, '..', '..', '..', 'public', 'images', file.filename));
+
+                // Remove o arquivo temporário
+                await unlink(file.path);
+
+                // Atualiza a URL da imagem
+                data.image = `${process.env.BASE_URL}:${process.env.PORT}/images/${file.filename}`;
             }
 
-            if(token && file) {
-                await sharp(file.path)
-                .resize(300)
-                .toFormat('jpeg')
-                .toFile(`./public/${file.fieldname}s/${file.filename}`)
+            const character = await this.createCharacterUseCase.execute(data);
 
-                await unlink(file.path)
-                
-                const img: IImageDTO = {
-                    url: `${process.env.BASE_URL}:${process.env.PORT}/${file.fieldname}s/${file.filename}`,
-                }
-
-                const charactersRepository = new CharactersRepository();
-                const createCharacterUseCase = new CreateCharacterUseCase(charactersRepository);
-
-                const character = await createCharacterUseCase.execute(data, img)
-
-                return response.status(200).json(character);
-            } else {
-                return response.status(400).json({ error: 'Unauthorized!!!' });
-            }
+            return response.status(201).json({
+                status: 'success',
+                data: character
+            });
         } catch (error) {
             if (error instanceof Error) {
-                return response.status(400).json({ error: error.message });
+                return response.status(400).json({
+                    status: 'error',
+                    message: error.message
+                });
             }
-            return response.status(400).json({ error: 'Unknown error' });
+            return response.status(500).json({
+                status: 'error',
+                message: 'Internal server error'
+            });
         }
     }
 }

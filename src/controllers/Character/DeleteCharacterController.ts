@@ -3,26 +3,42 @@ import { DeleteCharacterUseCase } from '../../useCases/Character/DeleteCharacter
 
 export class DeleteCharacterController {
     constructor(private deleteCharacterUseCase: DeleteCharacterUseCase) {
-        this.handle = this.handle.bind(this)
+        this.handle = this.handle.bind(this);
     }
 
     async handle(request: Request, response: Response) {
-        const { id } = request.params;
-        const token = request.headers.authorization;
-
         try {
-            if(token) {
-                await this.deleteCharacterUseCase.execute(id);
+            const { id } = request.params;
 
-                return response.status(200).json({ message: 'Character successfully deleted' });
-            } else {
-                return response.status(400).json({ error: 'Unauthorized!!!' });
-            }
+            // Executa o caso de uso
+            const result = await this.deleteCharacterUseCase.execute(id);
+
+            // Retorna a resposta de sucesso
+            return response.status(200).json({
+                status: 'success',
+                message: result.message
+            });
         } catch (error) {
             if (error instanceof Error) {
-                return response.status(400).json({ error: error.message });
+                // Trata erros específicos
+                if (error.message.includes('Character not found')) {
+                    return response.status(404).json({
+                        status: 'error',
+                        message: error.message
+                    });
+                }
+                if (error.message.includes('Failed to delete character')) {
+                    return response.status(400).json({
+                        status: 'error',
+                        message: error.message
+                    });
+                }
             }
-            return response.status(400).json({ error: 'Unknown error' });
+            // Erro genérico
+            return response.status(500).json({
+                status: 'error',
+                message: 'Internal server error'
+            });
         }
     }
 }

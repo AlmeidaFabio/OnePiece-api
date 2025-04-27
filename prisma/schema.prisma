@@ -8,15 +8,16 @@ datasource db {
 }
 
 model Character {
-    id           String   @id @default(uuid())
-    name         String
-    denomination String?
-    category     String   @default("Civil")
-    description  String
-    devilFruit   String?
-    images       Image[]
-    createdAt    DateTime @default(now())
-    updatedAt    DateTime @updatedAt
+    id          String   @id @default(uuid())
+    name        String
+    description String
+    bounty      Float    @default(0)
+    devilFruit  String?
+    crew        String?
+    image       String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    Image       Image[]
 }
 
 model Image {

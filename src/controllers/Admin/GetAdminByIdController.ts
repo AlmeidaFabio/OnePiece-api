@@ -3,23 +3,30 @@ import { GetAdminUseCase } from "../../useCases/Admin/GetAdminUseCase";
 
 export class GetAdminByIdController {
     constructor(private getAdmin: GetAdminUseCase) {
-        this.getAdminById = this.getAdminById.bind(this)
+        this.handle = this.handle.bind(this)
     }
 
-    async getAdminById(request:Request, response:Response) {
-        const id = request.params.id;
-
+    async handle(request: Request, response: Response) {
         try {
-            const admin = await this.getAdmin.execute(id);
+            if (!request.user?.id) {
+                return response.status(401).json({ error: "Unauthorized" });
+            }
 
-            return response.status(200).json(admin);
+            const admin = await this.getAdmin.execute(request.user.id);
+
+            return response.status(200).json({
+                admin: {
+                    id: admin.id,
+                    email: admin.email
+                }
+            });
         } catch (error) {
             if (error instanceof Error) {
-                return response.status(400).send({
+                return response.status(400).json({
                     error: error.message
                 });
             }
-            return response.status(400).send({
+            return response.status(400).json({
                 error: 'Unknown error'
             });
         }

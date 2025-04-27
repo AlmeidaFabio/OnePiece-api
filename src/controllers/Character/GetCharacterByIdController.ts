@@ -3,21 +3,40 @@ import { GetCharacterByIdUseCase } from "../../useCases/Character/GetCharacterBy
 
 export class GetCharacterByIdController {
     constructor(private getCharacterByIdUseCase: GetCharacterByIdUseCase) {
-        this.handle = this.handle.bind(this)
+        this.handle = this.handle.bind(this);
     }
 
-    async handle(request:Request, response:Response) {
-        const { id } = request.params;
-
+    async handle(request: Request, response: Response) {
         try {
-            const character = await this.getCharacterByIdUseCase.execute(id);
+            const id = request.params.id;
 
-            return response.status(200).json(character);
+            if (!id) {
+                return response.status(400).json({
+                    status: 'error',
+                    message: 'Character ID is required'
+                });
+            }
+
+            const result = await this.getCharacterByIdUseCase.execute(id);
+
+            return response.status(200).json(result);
         } catch (error) {
             if (error instanceof Error) {
-                return response.status(400).json({ error: error.message });
+                if (error.message.includes('not found')) {
+                    return response.status(404).json({
+                        status: 'error',
+                        message: error.message
+                    });
+                }
+                return response.status(400).json({
+                    status: 'error',
+                    message: error.message
+                });
             }
-            return response.status(400).json({ error: 'Unknown error' });
+            return response.status(500).json({
+                status: 'error',
+                message: 'Internal server error'
+            });
         }
     }
 }

@@ -1,32 +1,22 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import env from "../utils/env";
 
 export class Auth {
-    async private(request:Request, response:Response, next:NextFunction) {
+    private = (req: Request, res: Response, next: NextFunction) => {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader) {
+            return res.status(401).json({ error: "Token not provided" });
+        }
+
+        const [, token] = authHeader.split(' ');
+
         try {
-            if(!request.headers.authorization) {
-                response.json({notallowed:true})
-                return;
-            }
-    
-            let token = '';
-    
-            if(request.headers.authorization) {
-                token = request.headers.authorization;
-            }
-            if(token == '') {
-                response.json({notallowed:true})
-                return;
-            }
-    
-            jwt.verify(token, env.requireEnv('SECRET_KEY'), (err, decoded) => {
-                if(err) return response.status(401).json({error: 'Token invalid'})
-            });
-    
-            next();
-        } catch (err) {
-            return response.json({error:err})
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as { id: string; email: string };
+            req.user = decoded;
+            return next();
+        } catch (error) {
+            return res.status(401).json({ error: "Token invalid" });
         }
     }
 }
