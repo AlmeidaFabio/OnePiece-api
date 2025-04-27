@@ -161,6 +161,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Made with ❤️ by [Fábio Almeida]
+Made with ❤️ by Fábio Almeida
 
-[![GitHub stars](https://img.shields.io/github/stars/AlmeidaFabio/one-piece-api?style=social)](https://github.com/AlmeidaFabio/one-piece-api)
+[![GitHub stars](https://img.shields.io/github/stars/AlmeidaFabio/one-piece-api?style=social)](https://github.com/AlmeidaFabio/OnePiece-api)
