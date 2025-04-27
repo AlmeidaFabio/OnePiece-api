@@ -2,24 +2,20 @@ import { Request, Response } from "express";
 import { ListCharactersUseCase } from "../../useCases/Character/ListCharactersUseCase";
 
 export class ListCharactersController {
-    constructor(private listCharaterUseCase: ListCharactersUseCase){
-        this.listCharacters = this.listCharacters.bind(this)
+    constructor(private listCharactersUseCase: ListCharactersUseCase) {
+        this.handle = this.handle.bind(this)
     }
 
-    async listCharacters(request:Request, response:Response) {
-        const { page = 1, limit = 3 } = request.query;
-
+    async handle(request:Request, response:Response) {
         try {
-            const res = await this.listCharaterUseCase.execute(page.toString(), limit.toString());
-            
-            return response.status(200).json({
-                characters: res.data,
-                totalPages: Math.ceil(parseInt(res.count) / parseInt(limit.toString())),
-                page
+            const characters = await this.listCharactersUseCase.execute();
 
-            })
+            return response.status(200).json(characters);
         } catch (error) {
-            return response.status(400).json({error: error.message})
+            if (error instanceof Error) {
+                return response.status(400).json({ error: error.message });
+            }
+            return response.status(400).json({ error: 'Unknown error' });
         }
     }
 }

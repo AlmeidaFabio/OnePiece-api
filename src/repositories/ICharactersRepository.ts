@@ -1,7 +1,8 @@
+import { Character } from "@prisma/client";
 import { ICharacterDTO } from "../dtos/ICharacterDTO";
 import { IImageDTO } from "../dtos/IImageDTO";
 import { IListCharacterResponseDTO } from "../dtos/IListCharacterResponseDTO";
-import { Character } from "../entities/Character";
+
 
 export interface ICharactersRepository {
     create(character: ICharacterDTO, image: IImageDTO): Promise<Character>;

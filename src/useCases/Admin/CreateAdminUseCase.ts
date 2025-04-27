@@ -1,16 +1,16 @@
-import { IAdminRequestDTO } from "../../dtos/IAdminRequestDTO";
-import { IAdminRepository } from "../../repositories/IAdminRepository";
+import { IAdminRepository } from '../../repositories/IAdminRepository';
+import { IAdminRequestDTO } from '../../dtos/IAdminRequestDTO';
 
 export class CreateAdminUseCase {
     constructor(private adminsRepository: IAdminRepository) {}
 
-    async execute(data: IAdminRequestDTO ) {
-        const admin = await this.adminsRepository.findByEmail(data.email)
-
-        if(admin) {
-            throw new Error('Admin already exists')
+    async execute(data: IAdminRequestDTO): Promise<void> {
+        const adminExists = await this.adminsRepository.findByEmail(data.email);
+        
+        if (adminExists) {
+            throw new Error('Admin already exists');
         }
 
-        return await this.adminsRepository.create(data).catch(error => error)
+        await this.adminsRepository.create(data);
     }
 }

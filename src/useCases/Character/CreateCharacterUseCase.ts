@@ -1,6 +1,6 @@
 import { ICharacterDTO } from "../../dtos/ICharacterDTO";
 import { IImageDTO } from "../../dtos/IImageDTO";
-import { ICharactersRepository } from "../../repositories/ICharactersRepositorry";
+import { ICharactersRepository } from "../../repositories/ICharactersRepository";
 
 export class CreateCharacterUseCase {
     constructor(private charactersRepository: ICharactersRepository){}

@@ -1,125 +1,131 @@
-import { Like, Repository } from "typeorm";
-import { AppDataSource } from "../../database/connections/mysql";
 import { ICharacterDTO } from "../../dtos/ICharacterDTO";
 import { IImageDTO } from "../../dtos/IImageDTO";
 import { IListCharacterResponseDTO } from "../../dtos/IListCharacterResponseDTO";
-import { Character } from "../../entities/Character";
-import { Image } from "../../entities/Image";
 import { ICharactersRepository } from "../ICharactersRepositorry";
 import { unlink } from 'fs/promises'
+import prisma from "../../config/prisma";
 
 export class CharactersRepository implements ICharactersRepository {
-    private charactersRepository: Repository<Character>;
-    private imagesRepository: Repository<Image>;
+    async create(data: ICharacterDTO, img: IImageDTO): Promise<any> {
+        const character = await prisma.character.create({
+            data: {
+                name: data.name,
+                denomination: data.denomination,
+                category: data.category,
+                description: data.description,
+                devilFruit: data.devilFruit,
+                images: {
+                    create: {
+                        url: img.url
+                    }
+                }
+            },
+            include: {
+                images: true
+            }
+        });
 
-    constructor()  {
-        this.charactersRepository = AppDataSource.getRepository(Character)
-        this.imagesRepository = AppDataSource.getRepository(Image)
+        return character;
     }
 
-    async create(data: ICharacterDTO, img: IImageDTO): Promise<Character> {
-        const character = this.charactersRepository.create({
-            name: data.name,
-            denomination: data.denomination,
-            category: data.category,
-            description: data.description,
-            devilFruit: data.devilFruit
-        })
-        
-        await this.charactersRepository.save(character)
+    async read(page?: string, limit?: string): Promise<IListCharacterResponseDTO> {
+        const skip = page ? (parseInt(page) - 1) * parseInt(limit || '10') : 0;
+        const take = limit ? parseInt(limit) : 10;
 
-        const image = this.imagesRepository.create({
-            url: img.url,
-            characterId: character.id
-        })
-
-        await this.imagesRepository.save(image)
-
-        return character
-    }
-
-    async read(page?:string, limit?:string): Promise<IListCharacterResponseDTO> {
-        const characters: Character[] = await this.charactersRepository.find({
-            relations:["image"],
-               order: {name: "ASC"},
-               take:(parseInt(limit) * 1),
-               skip:((parseInt(page) - 1) * parseInt(limit))
-        }).catch(error => error)
-
-        const countChars: Character[] = await this.charactersRepository.find()
-        const count = countChars.length;
+        const [characters, count] = await Promise.all([
+            prisma.character.findMany({
+                include: {
+                    images: true
+                },
+                orderBy: {
+                    name: 'asc'
+                },
+                skip,
+                take
+            }),
+            prisma.character.count()
+        ]);
 
         return {
             data: characters,
             count
-        }
+        };
     }
 
-    async getById(id: string): Promise<Character> {
-        const character = await this.charactersRepository.findOne({
-            where:{
-                id
-            },
-            relations: ["image"]
-        }).catch(error => error)
+    async getById(id: string): Promise<any> {
+        const character = await prisma.character.findUnique({
+            where: { id },
+            include: {
+                images: true
+            }
+        });
 
-        return character
+        return character;
     }
 
-    async update(id: string, data: ICharacterDTO, img?:IImageDTO): Promise<void> {
-        await this.charactersRepository.update(id, {
-            name: data.name,
-            denomination: data.denomination,
-            category: data.category,
-            description: data.description,
-            devilFruit: data.devilFruit
-        }).catch(error => error)
+    async update(id: string, data: ICharacterDTO, img?: IImageDTO): Promise<void> {
+        await prisma.character.update({
+            where: { id },
+            data: {
+                name: data.name,
+                denomination: data.denomination,
+                category: data.category,
+                description: data.description,
+                devilFruit: data.devilFruit
+            }
+        });
 
-        if(img) {
-            const oldImage: Image = await this.imagesRepository.findOne({
-                where: {
+        if (img) {
+            const oldImage = await prisma.image.findFirst({
+                where: { characterId: id }
+            });
+
+            if (oldImage) {
+                await unlink(oldImage.url);
+                await prisma.image.delete({
+                    where: { id: oldImage.id }
+                });
+            }
+
+            await prisma.image.create({
+                data: {
+                    url: img.url,
                     characterId: id
                 }
-            }).catch(error => error)
-    
-            if(oldImage) {
-                await unlink(oldImage.url).catch(error => error)
-                await this.imagesRepository.delete(oldImage.id).catch(error => error)
-            }
-            
-            const newImage = this.imagesRepository.create({
-                url: img.url,
-                characterId: id
-            })
-    
-            await this.imagesRepository.save(newImage)
+            });
         }
-
-        return
     }
 
     async delete(id: string): Promise<void> {
-        const image: Image = await this.imagesRepository.findOne({
-            where: {
-                characterId: id
-            }
-        }).catch(error => error)
+        const image = await prisma.image.findFirst({
+            where: { characterId: id }
+        });
 
-        await this.imagesRepository.delete(image.id).catch(error => error)
+        if (image) {
+            await unlink(image.url);
+            await prisma.image.delete({
+                where: { id: image.id }
+            });
+        }
 
-        await this.charactersRepository.delete(id).catch(error => error)
-
-        return
+        await prisma.character.delete({
+            where: { id }
+        });
     }
 
-    async search(text: string): Promise<Character[]> {
-        const result = await this.charactersRepository.find({
-            where:[{
-                name: Like(`%${text}`)
-            }],
-            relations:["image"]
-        }).catch(error => error)
+    async search(text: string): Promise<any[]> {
+        const characters = await prisma.character.findMany({
+            where: {
+                name: {
+                    contains: text,
+                    mode: 'insensitive'
+                }
+            },
+            include: {
+                images: true
+            }
+        });
 
-        return result
+        return characters;
     }
 }

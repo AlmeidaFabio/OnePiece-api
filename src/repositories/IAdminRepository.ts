@@ -1,5 +1,6 @@
 import { IAdminRequestDTO } from "../dtos/IAdminRequestDTO";
-import { Admin } from "../entities/Admin";
+import { Admin } from "@prisma/client";
+
 
 export interface IAdminRepository {
     create(admin: IAdminRequestDTO): Promise<void>;

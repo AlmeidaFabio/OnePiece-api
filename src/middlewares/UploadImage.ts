@@ -2,12 +2,15 @@ import * as multer from 'multer'
 import path from 'path'
 import crypto from 'crypto'
 import { Request } from 'express';
+import env from "../utils/env";
 
 const uploadFolder = (fieldname:string) => {
     return path.resolve(__dirname, '..', '..', 'tmp', `${fieldname}s`);
 }
 
-const storageTypes = {
+type StorageType = 'local';
+
+const storageTypes: Record<StorageType, multer.StorageEngine> = {
     local: multer.diskStorage({
         destination:(req:Request, file:Express.Multer.File, cb) => {
             cb(null, uploadFolder(file.fieldname))
@@ -26,7 +29,7 @@ const storageTypes = {
 
 export default {
     dest: path.resolve(__dirname, '..', '..', 'tmp', 'images'),
-    storage:storageTypes[process.env.STORAGE],
+    storage: storageTypes[env.requireEnv('STORAGE') as StorageType],
     limits: { fileSize: 2 * 1024 * 1024 },
     fileFilter: (req:Request, file:Express.Multer.File, cb:multer.FileFilterCallback) => {
         const allowedMimes = [

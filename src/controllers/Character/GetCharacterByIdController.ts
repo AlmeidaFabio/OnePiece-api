@@ -2,23 +2,22 @@ import { Request, Response } from "express";
 import { GetCharacterByIdUseCase } from "../../useCases/Character/GetCharacterByIdUseCase";
 
 export class GetCharacterByIdController {
-    constructor(private getCharacterByIdUseCase: GetCharacterByIdUseCase){
-        this.getCharacterById = this.getCharacterById.bind(this)
+    constructor(private getCharacterByIdUseCase: GetCharacterByIdUseCase) {
+        this.handle = this.handle.bind(this)
     }
 
-    async getCharacterById(request:Request, response:Response) {
-        const id = request.params.id
+    async handle(request:Request, response:Response) {
+        const { id } = request.params;
 
         try {
-            const character = await this.getCharacterByIdUseCase.execute(id)
+            const character = await this.getCharacterByIdUseCase.execute(id);
 
-            if(character) {
-                return response.status(200).json(character)
-            } else {
-                return response.status(400).json({error: 'Character not exists'})
-            }
+            return response.status(200).json(character);
         } catch (error) {
-            return response.status(400).json({error: error.message})
+            if (error instanceof Error) {
+                return response.status(400).json({ error: error.message });
+            }
+            return response.status(400).json({ error: 'Unknown error' });
         }
     }
 }
