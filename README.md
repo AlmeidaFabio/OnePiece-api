@@ -76,7 +76,7 @@ A powerful RESTful API that brings the world of One Piece to your applications. 
 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/one-piece-api.git
+git clone [https://github.com/yourusername/one-piece-api.git](https://github.com/AlmeidaFabio/OnePiece-api)
 cd one-piece-api
 ```
 
