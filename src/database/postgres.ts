@@ -6,14 +6,37 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
+let isConnected = false;
+let isConnecting = false;
+
 // Testar conexão ao iniciar
-export const connectDB = async () => {
+export const connectDB = async (attempt = 1) => {
+  if (isConnected || isConnecting) {
+    return;
+  }
+
+  isConnecting = true;
+
   try {
     await pool.query('SELECT NOW()');
+    isConnected = true;
     console.log('✅ PostgreSQL conectado com sucesso!');
   } catch (err) {
-    console.error('❌ Erro ao conectar ao PostgreSQL:', err);
-    process.exit(1);
+    console.warn(`⚠️ Falha ao conectar ao PostgreSQL (tentativa ${attempt}). Tentando novamente em 3s...`);
+
+    if (attempt < 5) {
+      setTimeout(() => {
+        isConnecting = false;
+        void connectDB(attempt + 1);
+      }, 3000);
+      return;
+    }
+
+    console.error('❌ Não foi possível conectar ao PostgreSQL após várias tentativas.', err);
+  } finally {
+    if (isConnected) {
+      isConnecting = false;
+    }
   }
 };
 
