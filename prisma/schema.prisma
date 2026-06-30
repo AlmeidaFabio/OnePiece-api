@@ -8,7 +8,7 @@ datasource db {
 
 model Character {
     id          String   @id @default(uuid())
-    name        String
+    name        String @unique
     description String
     bounty      Float    @default(0)
     devilFruit  String?
