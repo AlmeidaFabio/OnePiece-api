@@ -1,5 +1,6 @@
-import { ICharactersRepository } from "../../repositories/ICharactersRepository";
-import { GetCharactersDTO } from "../../validations/characterValidations";
+import { ICharactersRepository } from '../../repositories/ICharactersRepository';
+import { GetCharactersDTO } from '../../validations/characterValidations';
+import { AppError } from '../../errors/AppError';
 
 export class ListCharactersUseCase {
     constructor(private charactersRepository: ICharactersRepository) {}
@@ -11,18 +12,28 @@ export class ListCharactersUseCase {
             const validatedPage = Math.max(1, Number(page));
             const validatedLimit = Math.min(Math.max(1, Number(limit)), 100);
 
-            const result = await this.charactersRepository.findAll({
-                name,
-                crew,
-                hasDevilFruit: undefined,
-                minBounty,
-                maxBounty,
-                page: validatedPage,
-                limit: validatedLimit
-            });
+            const search = (targetPage: number) =>
+                this.charactersRepository.findAll({
+                    name,
+                    crew,
+                    hasDevilFruit,
+                    minBounty,
+                    maxBounty,
+                    page: targetPage,
+                    limit: validatedLimit
+                });
+
+            let result = await search(validatedPage);
 
             const totalPages = Math.max(1, Math.ceil(result.total / validatedLimit));
             const currentPage = Math.min(validatedPage, totalPages);
+
+            // Página além do fim: o skip já foi calculado com o valor original, então
+            // a consulta precisa ser refeita para trazer a última página de verdade.
+            // Antes a resposta dizia "page: 2" e vinha com a lista vazia.
+            if (currentPage !== validatedPage) {
+                result = await search(currentPage);
+            }
 
             return {
                 status: 'success',
@@ -41,10 +52,12 @@ export class ListCharactersUseCase {
                 }
             };
         } catch (error) {
+            if (error instanceof AppError) throw error;
+
             if (error instanceof Error) {
-                throw new Error(`Failed to list characters: ${error.message}`);
+                throw new Error(`Failed to list characters: ${error.message}`, { cause: error });
             }
-            throw new Error('Failed to list characters: Unknown error');
+            throw new Error('Failed to list characters: Unknown error', { cause: error });
         }
     }
 }

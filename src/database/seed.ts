@@ -1,7 +1,7 @@
-import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { characters } from "./data/characters";
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { characters } from './data/characters';
 
 const connectionString = process.env.DATABASE_URL!;
 
@@ -13,10 +13,15 @@ async function main() {
 
     // Insere novos personagens ou atualiza os existentes (sem apagar os demais)
     for (const character of characters) {
+        // bounty é BigInt no banco e as fichas que não declaram recompensa não
+        // devem sobrescrever o valor existente: por isso a chave é omitida em vez
+        // de virar 0 (o default do banco só se aplica na criação).
+        const data = character.bounty === undefined ? character : { ...character, bounty: BigInt(character.bounty) };
+
         await prisma.character.upsert({
             where: { name: character.name },
-            update: character,
-            create: character
+            update: data,
+            create: data
         });
     }
 

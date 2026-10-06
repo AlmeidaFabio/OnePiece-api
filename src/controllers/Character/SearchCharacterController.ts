@@ -1,5 +1,7 @@
-import { Request, Response } from "express";
-import { SearchCharacterUseCase } from "../../useCases/Character/SearchCharacterUseCase";
+import { Request, Response } from 'express';
+import { SearchCharacterUseCase } from '../../useCases/Character/SearchCharacterUseCase';
+import { SearchCharactersDTO } from '../../validations/characterValidations';
+import { AppError } from '../../errors/AppError';
 
 export class SearchCharacterController {
     constructor(private searchCharacterUseCase: SearchCharacterUseCase) {
@@ -8,40 +10,24 @@ export class SearchCharacterController {
 
     async search(request: Request, response: Response) {
         try {
-            const { q } = request.query;
+            // Já validado e convertido por validateRequest(searchCharactersSchema, 'query').
+            const filters = request.query as unknown as SearchCharactersDTO;
 
-            if (!q) {
-                return response.status(400).json({
-                    status: 'error',
-                    message: 'Search query is required'
-                });
-            }
+            const result = await this.searchCharacterUseCase.execute(filters);
 
-            const result = await this.searchCharacterUseCase.execute(q.toString());
-
-            if (result.data.characters.length === 0) {
-                return response.status(404).json({
-                    status: 'error',
-                    message: `No characters found matching "${q}"`
-                });
-            }
-
+            // Sem resultados é 200 com lista vazia. Antes era 404, o que confundia
+            // "nenhum resultado" com "rota inexistente" e não combinava com a
+            // paginação — pedir uma página além do fim também devolvia 404.
             return response.status(200).json(result);
         } catch (error) {
-            if (error instanceof Error) {
-                if (error.message.includes('Search text is required')) {
-                    return response.status(400).json({
-                        status: 'error',
-                        message: error.message
-                    });
-                }
-                if (error.message.includes('Failed to search characters')) {
-                    return response.status(400).json({
-                        status: 'error',
-                        message: error.message
-                    });
-                }
+            if (error instanceof AppError) {
+                return response.status(error.statusCode).json({
+                    status: 'error',
+                    message: error.message
+                });
             }
+
+            console.error('❌ Erro na busca de personagens:', error);
             return response.status(500).json({
                 status: 'error',
                 message: 'Internal server error'

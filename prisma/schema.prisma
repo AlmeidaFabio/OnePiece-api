@@ -1,31 +1,38 @@
 generator client {
-    provider = "prisma-client-js"
+    provider        = "prisma-client-js"
+    previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-    provider = "postgresql"
+    provider   = "postgresql"
+    extensions = [pg_trgm]
 }
 
 model Character {
     id          String   @id @default(uuid())
     name        String @unique
     description String
-    bounty      Float    @default(0)
+    // BigInt, nao Int: o maior bounty semeado e 4.048.900.000, acima do limite do
+    // INTEGER (2.147.483.647) — 6 fichas estouram esse teto. A API expoe o valor
+    // como number, entao o limite pratico e 2^53 - 1.
+    bounty      BigInt   @default(0)
     devilFruit  String?
     crew        String?
     image       String?
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
-    Image       Image[]
-}
 
-model Image {
-    id          String    @id @default(uuid())
-    url         String
-    characterId String
-    character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
-    createdAt   DateTime  @default(now())
-    updatedAt   DateTime  @updatedAt
+    // Filtros de faixa (minBounty/maxBounty) usam >= e <=, que o B-tree atende.
+    @@index([bounty])
+
+    // Filtros de texto usam contains + mode: insensitive, que o Prisma traduz para
+    // ILIKE '%valor%'. B-tree NAO atende wildcard a esquerda, entao estas colunas
+    // usam GIN com pg_trgm. Declarados aqui (e nao so no SQL da migration) para o
+    // Prisma reconhece-los: sem isso o migrate diff os proporia dropar.
+    @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "Character_name_trgm_idx")
+    @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "Character_description_trgm_idx")
+    @@index([crew(ops: raw("gin_trgm_ops"))], type: Gin, map: "Character_crew_trgm_idx")
+    @@index([devilFruit(ops: raw("gin_trgm_ops"))], type: Gin, map: "Character_devilFruit_trgm_idx")
 }
 
 model Admin {

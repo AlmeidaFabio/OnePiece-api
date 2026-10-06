@@ -1,28 +1,50 @@
-import { ICharacterDTO, ICharacterResponseDTO, ICharacterImageDTO, ICharacterImageResponseDTO } from "../../dtos/ICharacterDTO";
-import { ICharactersRepository } from "../ICharactersRepository";
-import { unlink } from 'fs/promises';
-import prisma from "../../config/prisma";
-import { Prisma } from "@prisma/client";
+import { ICharacterDTO, ICharacterResponseDTO } from '../../dtos/ICharacterDTO';
+import { ICharactersRepository } from '../ICharactersRepository';
+import prisma from '../../config/prisma';
+import { Character, Prisma } from '@prisma/client';
+import { AppError } from '../../errors/AppError';
+
+/** Violação de unicidade (nome de personagem já cadastrado). */
+const isUniqueConstraintError = (error: unknown): boolean =>
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+
+/**
+ * Converte o registro do Prisma para o formato da API.
+ *
+ * `bounty` é BigInt no banco (o maior valor semeado, 4.048.900.000, não cabe em
+ * INTEGER) e number na API. A conversão precisa acontecer aqui: JSON.stringify
+ * lança exceção ao encontrar um bigint, então o valor nunca pode escapar do
+ * repositório como bigint.
+ */
+const toResponse = (character: Character): ICharacterResponseDTO => ({
+    ...character,
+    bounty: Number(character.bounty),
+    devilFruit: character.devilFruit || undefined,
+    crew: character.crew || undefined,
+    image: character.image || undefined
+});
 
 export class CharactersRepository implements ICharactersRepository {
     async create(data: ICharacterDTO): Promise<ICharacterResponseDTO> {
-        const character = await prisma.character.create({
-            data: {
-                name: data.name,
-                description: data.description,
-                bounty: data.bounty,
-                devilFruit: data.devilFruit,
-                crew: data.crew,
-                image: data.image
-            }
-        });
+        try {
+            const character = await prisma.character.create({
+                data: {
+                    name: data.name,
+                    description: data.description,
+                    bounty: BigInt(data.bounty),
+                    devilFruit: data.devilFruit,
+                    crew: data.crew,
+                    image: data.image
+                }
+            });
 
-        return {
-            ...character,
-            devilFruit: character.devilFruit || undefined,
-            crew: character.crew || undefined,
-            image: character.image || undefined
-        };
+            return toResponse(character);
+        } catch (error) {
+            if (isUniqueConstraintError(error)) {
+                throw new AppError(`Já existe um personagem com o nome "${data.name}"`, 409);
+            }
+            throw error;
+        }
     }
 
     async findAll(filters: {
@@ -47,16 +69,14 @@ export class CharactersRepository implements ICharactersRepository {
             AND: [
                 filters.name ? { name: { contains: filters.name, mode: 'insensitive' as const } } : {},
                 filters.crew ? { crew: { contains: filters.crew, mode: 'insensitive' as const } } : {},
-                filters.hasDevilFruit !== undefined 
-                    ? { devilFruit: filters.hasDevilFruit ? { not: null } : null }
-                    : {},
+                filters.hasDevilFruit !== undefined ? { devilFruit: filters.hasDevilFruit ? { not: null } : null } : {},
                 {
                     bounty: {
-                        ...(filters.minBounty ? { gte: filters.minBounty } : {}),
-                        ...(filters.maxBounty ? { lte: filters.maxBounty } : {})
+                        ...(filters.minBounty !== undefined ? { gte: BigInt(filters.minBounty) } : {}),
+                        ...(filters.maxBounty !== undefined ? { lte: BigInt(filters.maxBounty) } : {})
                     }
                 }
-            ].filter(condition => {
+            ].filter((condition) => {
                 if (Object.keys(condition).length === 0) return false;
                 if (condition.bounty && Object.keys(condition.bounty).length === 0) return false;
                 return true;
@@ -74,12 +94,7 @@ export class CharactersRepository implements ICharactersRepository {
         });
 
         return {
-            characters: characters.map(char => ({
-                ...char,
-                devilFruit: char.devilFruit || undefined,
-                crew: char.crew || undefined,
-                image: char.image || undefined
-            })),
+            characters: characters.map(toResponse),
             total,
             page,
             limit
@@ -93,19 +108,14 @@ export class CharactersRepository implements ICharactersRepository {
             });
 
             if (!character) {
-                throw new Error(`Character with ID ${id} not found`);
+                throw new AppError(`Character with ID ${id} not found`, 404);
             }
 
-            return {
-                ...character,
-                devilFruit: character.devilFruit || undefined,
-                crew: character.crew || undefined,
-                image: character.image || undefined
-            };
+            return toResponse(character);
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
                 if (error.code === 'P2023') {
-                    throw new Error('Invalid ID format');
+                    throw new AppError('Invalid ID format', 400);
                 }
             }
             throw error;
@@ -113,24 +123,30 @@ export class CharactersRepository implements ICharactersRepository {
     }
 
     async update(id: string, data: Partial<ICharacterDTO>): Promise<ICharacterResponseDTO> {
-        const character = await prisma.character.update({
-            where: { id },
-            data: {
-                name: data.name,
-                description: data.description,
-                bounty: data.bounty,
-                devilFruit: data.devilFruit,
-                crew: data.crew,
-                image: data.image
-            }
-        });
+        try {
+            const character = await prisma.character.update({
+                where: { id },
+                data: {
+                    name: data.name,
+                    description: data.description,
+                    // undefined = não alterar (o Prisma ignora a chave).
+                    bounty: data.bounty === undefined ? undefined : BigInt(data.bounty),
+                    devilFruit: data.devilFruit,
+                    crew: data.crew,
+                    image: data.image
+                }
+            });
 
-        return {
-            ...character,
-            devilFruit: character.devilFruit || undefined,
-            crew: character.crew || undefined,
-            image: character.image || undefined
-        };
+            return toResponse(character);
+        } catch (error) {
+            if (isUniqueConstraintError(error)) {
+                throw new AppError(`Já existe um personagem com o nome "${data.name}"`, 409);
+            }
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                throw new AppError(`Character with ID ${id} not found`, 404);
+            }
+            throw error;
+        }
     }
 
     async delete(id: string): Promise<void> {
@@ -139,46 +155,22 @@ export class CharactersRepository implements ICharactersRepository {
         });
     }
 
-    async addImage(characterId: string, image: ICharacterImageDTO): Promise<ICharacterImageResponseDTO> {
-        const newImage = await prisma.image.create({
-            data: {
-                url: image.url,
-                characterId
-            }
-        });
-
-        return newImage;
-    }
-
-    async removeImage(imageId: string): Promise<void> {
-        const image = await prisma.image.findUnique({
-            where: { id: imageId }
-        });
-
-        if (image) {
-            await unlink(image.url);
-            await prisma.image.delete({
-                where: { id: imageId }
-            });
-        }
-    }
-
-    async search(txt: string): Promise<{
+    async search(filters: { txt: string; page?: number; limit?: number }): Promise<{
         characters: ICharacterResponseDTO[];
         total: number;
         page: number;
         limit: number;
     }> {
-        const page = 1;
-        const limit = 10;
+        const page = filters.page || 1;
+        const limit = filters.limit || 10;
         const skip = (page - 1) * limit;
 
         const where: Prisma.CharacterWhereInput = {
             OR: [
-                { name: { contains: txt, mode: 'insensitive' as const } },
-                { description: { contains: txt, mode: 'insensitive' as const } },
-                { crew: { contains: txt, mode: 'insensitive' as const } },
-                { devilFruit: { contains: txt, mode: 'insensitive' as const } }
+                { name: { contains: filters.txt, mode: 'insensitive' as const } },
+                { description: { contains: filters.txt, mode: 'insensitive' as const } },
+                { crew: { contains: filters.txt, mode: 'insensitive' as const } },
+                { devilFruit: { contains: filters.txt, mode: 'insensitive' as const } }
             ]
         };
 
@@ -195,12 +187,7 @@ export class CharactersRepository implements ICharactersRepository {
         ]);
 
         return {
-            characters: characters.map(char => ({
-                ...char,
-                devilFruit: char.devilFruit || undefined,
-                crew: char.crew || undefined,
-                image: char.image || undefined
-            })),
+            characters: characters.map(toResponse),
             total,
             page,
             limit

@@ -1,45 +1,39 @@
-import { Request, Response } from "express";
-import { CreateCharacterUseCase } from "../../useCases/Character/CreateCharacterUseCase";
+import { Request, Response } from 'express';
+import { CreateCharacterUseCase } from '../../useCases/Character/CreateCharacterUseCase';
 import { CreateCharacterDTO } from '../../validations/characterValidations';
-import sharp from "sharp";
-import { unlink } from 'fs/promises';
-import path from 'path';
-
-interface MulterRequest extends Request {
-    file?: Express.Multer.File;
-}
+import { ICharacterDTO } from '../../dtos/ICharacterDTO';
+import { AppError } from '../../errors/AppError';
+import { buildImageUrl, deleteCharacterImage, saveCharacterImage } from '../../utils/characterImage';
 
 export class CreateCharacterController {
     constructor(private createCharacterUseCase: CreateCharacterUseCase) {
         this.handle = this.handle.bind(this);
     }
 
-    async handle(request: MulterRequest, response: Response) {
+    async handle(request: Request, response: Response) {
+        // Guardado para limpar a imagem caso a criação falhe depois de gravá-la.
+        let savedImageUrl: string | undefined;
+
         try {
-            const { name, description, bounty, devilFruit, crew } = request.body as CreateCharacterDTO;
+            const { name, description, bounty, devilFruit, crew, image } = request.body as CreateCharacterDTO;
             const file = request.file;
 
-            const data: CreateCharacterDTO = {
+            // Os valores já chegam validados e convertidos pelo middleware.
+            // `bounty` é opcional porque recompensa só existe para procurados:
+            // ausente vira 0, ou seja, "sem recompensa conhecida".
+            const data: ICharacterDTO = {
                 name,
                 description,
-                bounty: Number(bounty),
+                bounty: bounty ?? 0,
                 devilFruit,
                 crew,
-                image: undefined
+                image
             };
 
             if (file) {
-                // Processa a imagem
-                const processedImage = await sharp(file.path)
-                    .resize(300)
-                    .toFormat('jpeg')
-                    .toFile(path.resolve(__dirname, '..', '..', '..', 'public', 'images', file.filename));
-
-                // Remove o arquivo temporário
-                await unlink(file.path);
-
-                // Atualiza a URL da imagem
-                data.image = `${process.env.BASE_URL}:${process.env.PORT}/images/${file.filename}`;
+                const filename = await saveCharacterImage(file);
+                data.image = buildImageUrl(request, filename);
+                savedImageUrl = data.image;
             }
 
             const character = await this.createCharacterUseCase.execute(data);
@@ -49,12 +43,19 @@ export class CreateCharacterController {
                 data: character
             });
         } catch (error) {
-            if (error instanceof Error) {
-                return response.status(400).json({
+            // Não deixa imagem órfã em public/images se o INSERT falhar (ex.: nome duplicado).
+            if (savedImageUrl) {
+                await deleteCharacterImage(savedImageUrl);
+            }
+
+            if (error instanceof AppError) {
+                return response.status(error.statusCode).json({
                     status: 'error',
                     message: error.message
                 });
             }
+
+            console.error('❌ Erro ao criar personagem:', error);
             return response.status(500).json({
                 status: 'error',
                 message: 'Internal server error'

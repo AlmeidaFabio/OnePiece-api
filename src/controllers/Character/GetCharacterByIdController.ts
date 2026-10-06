@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
-import { GetCharacterByIdUseCase } from "../../useCases/Character/GetCharacterByIdUseCase";
+import { Request, Response } from 'express';
+import { GetCharacterByIdUseCase } from '../../useCases/Character/GetCharacterByIdUseCase';
+import { AppError } from '../../errors/AppError';
 
 export class GetCharacterByIdController {
     constructor(private getCharacterByIdUseCase: GetCharacterByIdUseCase) {
@@ -21,18 +22,15 @@ export class GetCharacterByIdController {
 
             return response.status(200).json(result);
         } catch (error) {
-            if (error instanceof Error) {
-                if (error.message.includes('not found')) {
-                    return response.status(404).json({
-                        status: 'error',
-                        message: error.message
-                    });
-                }
-                return response.status(400).json({
+            // Antes o status era decidido por error.message.includes('not found').
+            if (error instanceof AppError) {
+                return response.status(error.statusCode).json({
                     status: 'error',
                     message: error.message
                 });
             }
+
+            console.error('❌ Erro ao buscar personagem:', error);
             return response.status(500).json({
                 status: 'error',
                 message: 'Internal server error'

@@ -1,4 +1,4 @@
-import { ICharacterDTO, ICharacterResponseDTO, ICharacterImageDTO, ICharacterImageResponseDTO } from "../dtos/ICharacterDTO";
+import { ICharacterDTO, ICharacterResponseDTO } from '../dtos/ICharacterDTO';
 
 export interface ICharactersRepository {
     create(character: ICharacterDTO): Promise<ICharacterResponseDTO>;
@@ -19,9 +19,7 @@ export interface ICharactersRepository {
     findById(id: string): Promise<ICharacterResponseDTO>;
     update(id: string, data: Partial<ICharacterDTO>): Promise<ICharacterResponseDTO>;
     delete(id: string): Promise<void>;
-    addImage(characterId: string, image: ICharacterImageDTO): Promise<ICharacterImageResponseDTO>;
-    removeImage(imageId: string): Promise<void>;
-    search(txt: string): Promise<{
+    search(filters: { txt: string; page?: number; limit?: number }): Promise<{
         characters: ICharacterResponseDTO[];
         total: number;
         page: number;
