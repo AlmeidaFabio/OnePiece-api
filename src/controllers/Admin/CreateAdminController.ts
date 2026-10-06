@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
-import { CreateAdminUseCase } from "../../useCases/Admin/CreateAdminUseCase";
+import { Request, Response } from 'express';
+import { CreateAdminUseCase } from '../../useCases/Admin/CreateAdminUseCase';
+import { AppError } from '../../errors/AppError';
 import bcrypt from 'bcrypt';
 
 export class CreateAdminController {
@@ -11,21 +12,24 @@ export class CreateAdminController {
         try {
             const { email, password } = request.body;
             const hashedPassword = await bcrypt.hash(password, 10);
-            
-            const admin = await this.createAdminUseCase.execute({ 
-                email, 
-                password: hashedPassword 
+
+            // `admin` contém apenas { id, email }: o hash nunca volta na resposta.
+            const admin = await this.createAdminUseCase.execute({
+                email,
+                password: hashedPassword
             });
-            
-            return response.status(201).json({ 
+
+            return response.status(201).json({
                 message: 'Admin created successfully',
                 admin
             });
         } catch (error) {
-            if (error instanceof Error) {
-                return response.status(400).json({ error: error.message });
+            if (error instanceof AppError) {
+                return response.status(error.statusCode).json({ error: error.message });
             }
-            return response.status(400).json({ error: 'Unknown error' });
+
+            console.error('❌ Erro ao criar admin:', error);
+            return response.status(500).json({ error: 'Internal server error' });
         }
     }
 }

@@ -1,18 +1,18 @@
 import { IAdminRepository } from '../../repositories/IAdminRepository';
 import { IAdminRequestDTO } from '../../dtos/IAdminRequestDTO';
 import { IAdminResponseDTO } from '../../dtos/IAdminResponseDTO';
+import { AppError } from '../../errors/AppError';
 
 export class CreateAdminUseCase {
     constructor(private adminsRepository: IAdminRepository) {}
 
     async execute(data: IAdminRequestDTO): Promise<IAdminResponseDTO> {
         const adminExists = await this.adminsRepository.findByEmail(data.email);
-        
+
         if (adminExists) {
-            throw new Error('Admin already exists');
+            throw new AppError('Admin already exists', 409);
         }
 
-        const admin = await this.adminsRepository.create(data);
-        return admin;
+        return this.adminsRepository.create(data);
     }
 }

@@ -1,9 +1,9 @@
-import { AdminsRepository } from "../../repositories/implementations/AdminsRepository";
-import { GetAdminUseCase } from "../../useCases/Admin/GetAdminUseCase";
-import { CreateAdminUseCase } from "../../useCases/Admin/CreateAdminUseCase";
-import { AuthAdminController } from "./AuthAdminController";
-import { CreateAdminController } from "./CreateAdminController";
-import { GetAdminByIdController } from "./GetAdminByIdController";
+import { AdminsRepository } from '../../repositories/implementations/AdminsRepository';
+import { GetAdminUseCase } from '../../useCases/Admin/GetAdminUseCase';
+import { CreateAdminUseCase } from '../../useCases/Admin/CreateAdminUseCase';
+import { AuthAdminController } from './AuthAdminController';
+import { CreateAdminController } from './CreateAdminController';
+import { GetAdminByIdController } from './GetAdminByIdController';
 
 const adminsRepository = new AdminsRepository();
 

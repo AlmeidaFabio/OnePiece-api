@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
-import { AdminsRepository } from "../../repositories/implementations/AdminsRepository";
+import { Request, Response } from 'express';
+import { AdminsRepository } from '../../repositories/implementations/AdminsRepository';
+import { JWT_ALGORITHM, JWT_EXPIRES_IN, JWT_SECRET } from '../../config/auth';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -15,20 +16,19 @@ export class AuthAdminController {
             const admin = await this.adminsRepository.findByEmail(email);
 
             if (!admin) {
-                return response.status(401).json({ error: "Invalid credentials" });
+                return response.status(401).json({ error: 'Invalid credentials' });
             }
 
             const passwordMatch = await bcrypt.compare(password, admin.password);
 
             if (!passwordMatch) {
-                return response.status(401).json({ error: "Invalid credentials" });
+                return response.status(401).json({ error: 'Invalid credentials' });
             }
 
-            const token = jwt.sign(
-                { id: admin.id, email: admin.email },
-                process.env.JWT_SECRET || 'default-secret',
-                { expiresIn: '1d' }
-            );
+            const token = jwt.sign({ id: admin.id, email: admin.email }, JWT_SECRET, {
+                expiresIn: JWT_EXPIRES_IN,
+                algorithm: JWT_ALGORITHM
+            });
 
             return response.json({
                 admin: {
