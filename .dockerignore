@@ -1,0 +1,21 @@
+node_modules
+build
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Não precisa entrar na imagem: testes, docs e artefatos locais
+tests
+coverage
+*.md
+!README.md
+vitest.config.mts
+tsconfig.test.json
+
+# Imagens enviadas ficam em volume; só o .gitkeep precisa existir
+public/images/*
+!public/images/.gitkeep
+
+npm-debug.log*

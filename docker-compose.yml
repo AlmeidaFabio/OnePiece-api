@@ -1,22 +1,80 @@
-services:
-  db:
-    image: postgres:latest
-    container_name: onepiece-api
+# A API precisa do banco de pé E das migrations aplicadas antes de subir.
+# `migrate` roda uma vez por `up`; a API só inicia quando ele termina com sucesso.
+# A verificação de conectividade da própria API (src/database/connect.ts) é a
+# segunda barreira: sem banco, o processo encerra em vez de aceitar tráfego.
+x-api-base: &api-base
+    build:
+        context: .
+    image: onepiece-api:local
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    restart: always
+        NODE_ENV: production
+        PORT: ${PORT:-9000}
+        # Dentro da rede do compose o banco é o host `db`, não `localhost`.
+        DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+        JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+        JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+        CORS_ORIGINS: ${CORS_ORIGINS:-}
+        TRUST_PROXY: ${TRUST_PROXY:-}
+        BASE_URL: ${BASE_URL:-http://localhost:${PORT:-9000}}
+        # TLS não é configurado por padrão: a API sobe em HTTP e o TLS termina no seu
+        # proxy. Para servir HTTPS direto do container, defina SSL_KEY e SSL_CERT com
+        # caminhos de dentro do container e monte os certificados em um volume — a API
+        # só usa TLS se os dois arquivos existirem.
     networks:
-      - app-network
+        - app-network
+
+services:
+    db:
+        # Pinado na mesma major da versão em uso: o PostgreSQL 18 mudou o PGDATA para
+        # /var/lib/postgresql/18/docker, então o ponto de montagem abaixo é o correto
+        # para esta versão (nas anteriores era /var/lib/postgresql/data).
+        image: postgres:18.4
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+            POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env}
+        ports:
+            - '5432:5432'
+        volumes:
+            - postgres_data:/var/lib/postgresql
+        healthcheck:
+            # O $$ escapa para o shell de dentro do container, que expande as variáveis.
+            test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
+        restart: unless-stopped
+        networks:
+            - app-network
+
+    migrate:
+        <<: *api-base
+        command: ['npx', 'prisma', 'migrate', 'deploy']
+        restart: 'no'
+        depends_on:
+            db:
+                condition: service_healthy
+
+    api:
+        <<: *api-base
+        # Sem container_name de propósito: o nome seria global e impediria dois
+        # projetos de rodar ao mesmo tempo. Os nomes gerados são <projeto>-<serviço>-1;
+        # para entrar no container, use o nome do serviço.
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+        ports:
+            - '${PORT:-9000}:${PORT:-9000}'
+        volumes:
+            # As imagens enviadas ficam fora do container, senão somem no recreate.
+            - images:/app/public/images
+        restart: unless-stopped
 
 volumes:
-  postgres_data:
+    postgres_data:
+    images:
 
 networks:
-  app-network:
-    driver: bridge 
+    app-network:
+        driver: bridge
