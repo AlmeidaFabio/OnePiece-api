@@ -1,0 +1,72 @@
+name: CI
+
+on:
+    push:
+    pull_request:
+
+jobs:
+    verify:
+        name: Lint, tipos, testes e build
+        runs-on: ubuntu-latest
+
+        services:
+            postgres:
+                image: postgres:18.4
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: onepiece
+                ports:
+                    - 5432:5432
+                # Sem o healthcheck o job começa antes do banco aceitar conexões e a
+                # suíte falha por indisponibilidade, não por bug.
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 10
+
+        env:
+            # A suíte deriva o banco de testes desta URL (onepiece -> onepiece_test)
+            # e o cria/migra sozinha. Nunca aponta para o banco de desenvolvimento.
+            DATABASE_URL: postgresql://postgres:postgres@localhost:5432/onepiece
+            JWT_SECRET: segredo-usado-apenas-no-ci
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+
+            # Exige o lockfile completo — ver a nota sobre o npm no CONTRIBUTING.
+            - name: Instalar dependências
+              run: npm ci
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Formatação
+              run: npm run format:check
+
+            - name: Tipos
+              run: npm run typecheck
+
+            - name: Testes
+              run: npm test
+
+            - name: Build
+              run: npm run build
+
+    docker:
+        name: Build da imagem
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            # Garante que o Dockerfile continua construindo (dependências nativas,
+            # Prisma Client e compilação).
+            - name: docker build
+              run: docker build -t onepiece-api:ci .

@@ -2,10 +2,11 @@
   "compilerOptions": {
     /* Basic Options */
     // "incremental": true,                   /* Enable incremental compilation */
-    "target": "es2020",                       /* Modern Node-compatible target */
+    "target": "es2022",                       /* ES2022: Node >= 20.9 exige; `new Error(msg, { cause })` depende desse lib */
     "module": "commonjs",                     /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */
     "rootDir": "./src",                       /* Set the root directory for TypeScript sources */
     "outDir": "./build",                      /* Redirect output structure to the build folder */
+    "noEmitOnError": true,                    /* Nao emite build parcial quando ha erro de tipo */
     "ignoreDeprecations": "6.0",              /* Silence TypeScript 6 deprecation warnings */
     // "lib": [],                             /* Specify library files to be included in the compilation. */
     // "allowJs": true,                       /* Allow javascript files to be compiled. */
@@ -67,6 +68,9 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true  /* Disallow inconsistently-cased references to the same file. */
   },
+  "include": [
+    "src"
+  ],
   "exclude": [
     "node_modules",
     "build",

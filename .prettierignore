@@ -1,0 +1,9 @@
+build
+node_modules
+package-lock.json
+prisma/migrations
+public
+
+# Arquivo cheio de JSONC com comentários alinhados (gerado pelo tsc --init):
+# o Prettier quebra o alinhamento e deixa a leitura pior.
+tsconfig.json
